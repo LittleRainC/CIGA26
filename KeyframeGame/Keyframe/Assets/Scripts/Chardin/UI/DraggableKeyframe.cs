@@ -16,6 +16,16 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
         keyframeId = id;
         trackBar = bar;
         rootCanvas = GetComponentInParent<Canvas>();
+
+        RectTransform handleRect = transform as RectTransform;
+        if (handleRect != null)
+        {
+            handleRect.anchorMin = new Vector2(0f, 0.5f);
+            handleRect.anchorMax = new Vector2(0f, 0.5f);
+            handleRect.pivot = new Vector2(0f, 0.5f);
+            handleRect.anchoredPosition = Vector2.zero;
+            handleRect.localScale = Vector3.one;
+        }
     }
 
     public void OnBeginDrag(PointerEventData eventData)

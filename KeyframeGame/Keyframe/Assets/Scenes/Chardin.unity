@@ -298,6 +298,7 @@ MonoBehaviour:
   timelineSystem: {fileID: 1272055441}
   rulerArea: {fileID: 358593696}
   tickLabelPrefab: {fileID: 6707416082031477345, guid: 5f41f92fec311fc46b89d52e1c81dd08, type: 3}
+  labelTopPadding: 100
 --- !u!114 &358593698
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1066,7 +1067,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1372395434}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -1284,11 +1285,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 964697031b2d74f47b27f5961a11a877, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  labelColumnWidth: 120
+  timelineContentWidth: 550
   timelineSystem: {fileID: 1272055441}
   playhead: {fileID: 645629985}
   playheadArea: {fileID: 358593696}
   trackRowsContainer: {fileID: 1372395435}
   trackRowPrefab: {fileID: 6031983178986530538, guid: 46c5fdb98c5ad434495fd26a4843b3e8, type: 3}
+  keyframeHandlePrefab: {fileID: 8380826597060523806, guid: ed655dd396478b34b9210149514b515c, type: 3}
+  gridLinePrefab: {fileID: 4466516180899153941, guid: 6f73ee3d245616046887e6957850db58, type: 3}
   timeLabel: {fileID: 1792437969}
   resetButton: {fileID: 269930087}
   timelineRuler: {fileID: 358593697}

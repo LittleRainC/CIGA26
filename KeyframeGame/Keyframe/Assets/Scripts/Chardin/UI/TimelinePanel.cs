@@ -18,6 +18,8 @@ public class TimelinePanel : MonoBehaviour
     [SerializeField] RectTransform playheadArea;
     [SerializeField] RectTransform trackRowsContainer;
     [SerializeField] TrackRowUI trackRowPrefab;
+    [SerializeField] DraggableKeyframe keyframeHandlePrefab;
+    [SerializeField] RectTransform gridLinePrefab;
     [SerializeField] TextMeshProUGUI timeLabel;
     [SerializeField] Button resetButton;
     [SerializeField] TimelineRulerUI timelineRuler;
@@ -195,7 +197,13 @@ public class TimelinePanel : MonoBehaviour
         {
             TrackRowUI row = Instantiate(trackRowPrefab, trackRowsContainer);
             SetupTrackRowLayout(row.transform as RectTransform);
-            row.Bind(tracks[i], timelineSystem, GetLayoutSettings(), playheadArea);
+            row.Bind(
+                tracks[i],
+                timelineSystem,
+                GetLayoutSettings(),
+                playheadArea,
+                keyframeHandlePrefab,
+                gridLinePrefab);
             trackRows.Add(row);
         }
 
@@ -229,6 +237,7 @@ public class TimelinePanel : MonoBehaviour
         {
             if (trackRows[i] != null)
             {
+                trackRows[i].Unbind();
                 Destroy(trackRows[i].gameObject);
             }
         }

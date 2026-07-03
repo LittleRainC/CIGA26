@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class TrackRowUI : MonoBehaviour
 {
@@ -16,6 +17,8 @@ public class TrackRowUI : MonoBehaviour
     TimelineSystem timelineSystem;
     TimelineLayoutSettings layout;
     RectTransform timelineContentReference;
+    DraggableKeyframe handlePrefab;
+    RectTransform linePrefab;
 
     public TimelineTrack Track => track;
 
@@ -23,10 +26,14 @@ public class TrackRowUI : MonoBehaviour
         TimelineTrack boundTrack,
         TimelineSystem system,
         TimelineLayoutSettings layoutSettings,
-        RectTransform contentReference)
+        RectTransform contentReference,
+        DraggableKeyframe handlePrefabOverride,
+        RectTransform gridLinePrefabOverride)
     {
         layout = layoutSettings;
         timelineContentReference = contentReference;
+        handlePrefab = handlePrefabOverride != null ? handlePrefabOverride : keyframeHandlePrefab;
+        linePrefab = gridLinePrefabOverride != null ? gridLinePrefabOverride : gridLinePrefab;
 
         if (track != null)
         {
@@ -48,6 +55,11 @@ public class TrackRowUI : MonoBehaviour
 
         AlignRowToTimelineContent();
         SetupTrackBarLayout();
+        if (trackBar != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(trackBar);
+        }
+
         RebuildGridLines();
         RebuildHandles();
     }
@@ -56,8 +68,22 @@ public class TrackRowUI : MonoBehaviour
     {
         AlignRowToTimelineContent();
         SetupTrackBarLayout();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(trackBar);
         RebuildGridLines();
-        RebuildHandles();
+        RefreshHandlePositions();
+    }
+
+    public void Unbind()
+    {
+        if (track != null)
+        {
+            track.KeyframesChanged -= RebuildHandles;
+        }
+
+        track = null;
+        timelineSystem = null;
+        ClearHandles();
+        ClearGridLines();
     }
 
     void AlignRowToTimelineContent()
@@ -131,8 +157,14 @@ public class TrackRowUI : MonoBehaviour
     {
         ClearHandles();
 
-        if (track == null || trackBar == null || keyframeHandlePrefab == null)
+        if (track == null || trackBar == null)
         {
+            return;
+        }
+
+        if (handlePrefab == null)
+        {
+            Debug.LogWarning($"TrackRowUI on '{name}' is missing Keyframe Handle Prefab.", this);
             return;
         }
 
@@ -140,11 +172,57 @@ public class TrackRowUI : MonoBehaviour
         for (int i = 0; i < keyframes.Count; i++)
         {
             TimelineKeyframe keyframe = keyframes[i];
-            DraggableKeyframe handle = Instantiate(keyframeHandlePrefab, trackBar);
+            DraggableKeyframe handle = Instantiate(handlePrefab, trackBar);
+            handle.gameObject.SetActive(true);
             handle.Initialize(this, keyframe.Id, trackBar);
             handles[keyframe.Id] = handle;
             SetHandlePosition(handle.GetComponent<RectTransform>(), keyframe.Time);
         }
+    }
+
+    void RefreshHandlePositions()
+    {
+        if (track == null || trackBar == null || timelineSystem == null)
+        {
+            return;
+        }
+
+        if (handles.Count != track.Keyframes.Count)
+        {
+            RebuildHandles();
+            return;
+        }
+
+        IReadOnlyList<TimelineKeyframe> keyframes = track.Keyframes;
+        for (int i = 0; i < keyframes.Count; i++)
+        {
+            TimelineKeyframe keyframe = keyframes[i];
+            if (handles.TryGetValue(keyframe.Id, out DraggableKeyframe handle))
+            {
+                SetHandlePosition(handle.GetComponent<RectTransform>(), keyframe.Time);
+            }
+            else
+            {
+                RebuildHandles();
+                return;
+            }
+        }
+    }
+
+    float GetTrackBarWidth()
+    {
+        if (trackBar == null)
+        {
+            return layout.timelineContentWidth;
+        }
+
+        float width = trackBar.rect.width;
+        if (width <= Mathf.Epsilon)
+        {
+            width = layout.timelineContentWidth;
+        }
+
+        return width;
     }
 
     public void UpdateHandlePreview(string keyframeId, float timeInSeconds)
@@ -171,7 +249,7 @@ public class TrackRowUI : MonoBehaviour
     {
         ClearGridLines();
 
-        if (timelineSystem == null || trackBar == null || gridLinePrefab == null)
+        if (timelineSystem == null || trackBar == null || linePrefab == null)
         {
             return;
         }
@@ -184,7 +262,7 @@ public class TrackRowUI : MonoBehaviour
 
         for (float time = 0f; time <= timelineSystem.Duration + 0.001f; time += interval)
         {
-            RectTransform line = Instantiate(gridLinePrefab, trackBar);
+            RectTransform line = Instantiate(linePrefab, trackBar);
             line.gameObject.SetActive(true);
             SetHandlePosition(line, time);
             gridLines.Add(line);
@@ -202,9 +280,11 @@ public class TrackRowUI : MonoBehaviour
         handle.anchorMin = new Vector2(0f, 0.5f);
         handle.anchorMax = new Vector2(0f, 0.5f);
         handle.pivot = new Vector2(0f, 0.5f);
+        handle.localScale = Vector3.one;
 
         float normalized = timelineSystem.TimeToNormalized(timeInSeconds);
-        handle.anchoredPosition = new Vector2(normalized * trackBar.rect.width, 0f);
+        float barWidth = GetTrackBarWidth();
+        handle.anchoredPosition = new Vector2(normalized * barWidth, 0f);
     }
 
     void ClearHandles()
