@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,69 +6,109 @@ public class TrackRowUI : MonoBehaviour
 {
     [SerializeField] Text labelText;
     [SerializeField] RectTransform trackBar;
-    [SerializeField] RectTransform startAnchorHandle;
-    [SerializeField] RectTransform endAnchorHandle;
-    [SerializeField] DraggableAnchor startAnchorDrag;
-    [SerializeField] DraggableAnchor endAnchorDrag;
+    [SerializeField] DraggableKeyframe keyframeHandlePrefab;
+
+    readonly Dictionary<string, DraggableKeyframe> handles = new Dictionary<string, DraggableKeyframe>();
 
     TimelineTrack track;
+    TimelineSystem timelineSystem;
 
     public TimelineTrack Track => track;
 
-    public void Bind(TimelineTrack boundTrack)
+    public void Bind(TimelineTrack boundTrack, TimelineSystem system)
     {
-        track = boundTrack;
-        startAnchorDrag.Initialize(this, trackBar, true);
-        endAnchorDrag.Initialize(this, trackBar, false);
-        Refresh();
-    }
-
-    public void Refresh()
-    {
-        if (track == null || trackBar == null)
+        if (track != null)
         {
-            return;
+            track.KeyframesChanged -= RebuildHandles;
         }
 
-        if (labelText != null)
+        track = boundTrack;
+        timelineSystem = system;
+
+        if (track != null)
+        {
+            track.KeyframesChanged += RebuildHandles;
+        }
+
+        if (labelText != null && track != null)
         {
             labelText.text = track.DisplayName;
         }
 
-        SetAnchorVisual(startAnchorHandle, track.StartAnchorTime);
-        SetAnchorVisual(endAnchorHandle, track.EndAnchorTime);
+        RebuildHandles();
     }
 
-    public void SetAnchorTime(bool isStartAnchor, float normalizedTime)
+    void OnDestroy()
+    {
+        if (track != null)
+        {
+            track.KeyframesChanged -= RebuildHandles;
+        }
+    }
+
+    public void RebuildHandles()
+    {
+        ClearHandles();
+
+        if (track == null || trackBar == null || keyframeHandlePrefab == null)
+        {
+            return;
+        }
+
+        IReadOnlyList<TimelineKeyframe> keyframes = track.Keyframes;
+        for (int i = 0; i < keyframes.Count; i++)
+        {
+            TimelineKeyframe keyframe = keyframes[i];
+            DraggableKeyframe handle = Instantiate(keyframeHandlePrefab, trackBar);
+            handle.Initialize(this, keyframe.Id, trackBar);
+            handles[keyframe.Id] = handle;
+            SetHandlePosition(handle.GetComponent<RectTransform>(), keyframe.Time);
+        }
+    }
+
+    public void UpdateHandlePreview(string keyframeId, float timeInSeconds)
+    {
+        if (handles.TryGetValue(keyframeId, out DraggableKeyframe handle))
+        {
+            SetHandlePosition(handle.GetComponent<RectTransform>(), timeInSeconds);
+        }
+    }
+
+    public void CommitKeyframeTime(string keyframeId, float timeInSeconds)
     {
         if (track == null)
         {
             return;
         }
 
-        if (isStartAnchor)
-        {
-            track.SetStartAnchorTime(normalizedTime);
-        }
-        else
-        {
-            track.SetEndAnchorTime(normalizedTime);
-        }
-
-        Refresh();
+        track.SetKeyframeTime(keyframeId, timeInSeconds);
+        timelineSystem?.OnKeyframesEdited();
+        RebuildHandles();
     }
 
-    void SetAnchorVisual(RectTransform anchor, float normalizedTime)
+    void SetHandlePosition(RectTransform handle, float timeInSeconds)
     {
-        if (anchor == null || trackBar == null)
+        if (handle == null || trackBar == null || timelineSystem == null)
         {
             return;
         }
 
-        // Track bar should use left-middle pivot (0, 0.5) for this mapping.
-        float x = normalizedTime * trackBar.rect.width;
-        Vector2 anchoredPosition = anchor.anchoredPosition;
-        anchoredPosition.x = x;
-        anchor.anchoredPosition = anchoredPosition;
+        float normalized = timelineSystem.TimeToNormalized(timeInSeconds);
+        Vector2 anchoredPosition = handle.anchoredPosition;
+        anchoredPosition.x = normalized * trackBar.rect.width;
+        handle.anchoredPosition = anchoredPosition;
+    }
+
+    void ClearHandles()
+    {
+        foreach (KeyValuePair<string, DraggableKeyframe> pair in handles)
+        {
+            if (pair.Value != null)
+            {
+                Destroy(pair.Value.gameObject);
+            }
+        }
+
+        handles.Clear();
     }
 }

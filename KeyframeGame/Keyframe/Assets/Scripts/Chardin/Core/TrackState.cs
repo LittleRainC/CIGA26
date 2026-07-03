@@ -6,13 +6,15 @@ public struct TrackState
 {
     public Vector3 position;
     public float rotationZ;
+    public Vector3 scale;
 
     public static TrackState FromTransform(Transform transform)
     {
         return new TrackState
         {
             position = transform.position,
-            rotationZ = transform.eulerAngles.z
+            rotationZ = transform.eulerAngles.z,
+            scale = transform.localScale
         };
     }
 
@@ -22,7 +24,8 @@ public struct TrackState
         return new TrackState
         {
             position = Vector3.Lerp(from.position, to.position, t),
-            rotationZ = Mathf.LerpAngle(from.rotationZ, to.rotationZ, t)
+            rotationZ = Mathf.LerpAngle(from.rotationZ, to.rotationZ, t),
+            scale = Vector3.Lerp(from.scale, to.scale, t)
         };
     }
 
@@ -30,5 +33,6 @@ public struct TrackState
     {
         transform.position = position;
         transform.rotation = Quaternion.Euler(0f, 0f, rotationZ);
+        transform.localScale = scale;
     }
 }

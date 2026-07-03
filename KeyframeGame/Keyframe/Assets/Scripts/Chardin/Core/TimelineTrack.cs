@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -7,34 +8,20 @@ public class TimelineTrack : MonoBehaviour
     [Header("Identity")]
     [SerializeField] string displayName;
 
-    [Header("Anchors (0-1)")]
-    [SerializeField, Range(0f, 1f)] float startAnchorTime = 0.2f;
-    [SerializeField, Range(0f, 1f)] float endAnchorTime = 0.6f;
+    [Header("Keyframes")]
+    [SerializeField] List<TimelineKeyframe> keyframes = new List<TimelineKeyframe>();
 
-    [Header("States")]
-    [SerializeField] TrackState startState;
-    [SerializeField] TrackState endState;
-    [SerializeField] bool captureStartStateOnAwake = true;
+    readonly List<TimelineKeyframe> sortedBuffer = new List<TimelineKeyframe>();
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
-    public float StartAnchorTime => startAnchorTime;
-    public float EndAnchorTime => endAnchorTime;
-    public TrackState StartState => startState;
-    public TrackState EndState => endState;
+    public IReadOnlyList<TimelineKeyframe> Keyframes => keyframes;
 
-    public event Action AnchorsChanged;
-
-    void Awake()
-    {
-        if (captureStartStateOnAwake)
-        {
-            startState = TrackState.FromTransform(transform);
-        }
-    }
+    public event Action KeyframesChanged;
 
     void Start()
     {
         TimelineSystem.Instance?.RegisterTrack(this);
+        ApplyTime(TimelineSystem.Instance != null ? TimelineSystem.Instance.CurrentTime : 0f);
     }
 
     void OnDestroy()
@@ -42,68 +29,135 @@ public class TimelineTrack : MonoBehaviour
         TimelineSystem.Instance?.UnregisterTrack(this);
     }
 
-    public void Evaluate(float normalizedTime)
+    public void Evaluate(float currentTime)
     {
-        TrackState state;
+        ApplyTime(currentTime);
+    }
 
-        if (normalizedTime <= startAnchorTime)
+    void ApplyTime(float currentTime)
+    {
+        if (keyframes.Count == 0)
         {
-            state = startState;
-        }
-        else if (normalizedTime >= endAnchorTime)
-        {
-            state = endState;
-        }
-        else
-        {
-            float duration = endAnchorTime - startAnchorTime;
-            float t = duration <= Mathf.Epsilon ? 1f : (normalizedTime - startAnchorTime) / duration;
-            state = TrackState.Lerp(startState, endState, t);
+            return;
         }
 
-        state.ApplyTo(transform);
+        BuildSortedKeyframes();
+
+        if (sortedBuffer.Count == 1)
+        {
+            sortedBuffer[0].State.ApplyTo(transform);
+            return;
+        }
+
+        TimelineKeyframe first = sortedBuffer[0];
+        TimelineKeyframe last = sortedBuffer[sortedBuffer.Count - 1];
+
+        if (currentTime <= first.Time)
+        {
+            first.State.ApplyTo(transform);
+            return;
+        }
+
+        if (currentTime >= last.Time)
+        {
+            last.State.ApplyTo(transform);
+            return;
+        }
+
+        for (int i = 0; i < sortedBuffer.Count - 1; i++)
+        {
+            TimelineKeyframe left = sortedBuffer[i];
+            TimelineKeyframe right = sortedBuffer[i + 1];
+
+            if (currentTime < left.Time || currentTime > right.Time)
+            {
+                continue;
+            }
+
+            float span = right.Time - left.Time;
+            float t = span <= Mathf.Epsilon ? 1f : (currentTime - left.Time) / span;
+            TrackState.Lerp(left.State, right.State, t).ApplyTo(transform);
+            return;
+        }
     }
 
-    public void SetStartAnchorTime(float value)
+    public void SetKeyframeTime(string keyframeId, float newTime)
     {
-        startAnchorTime = Mathf.Clamp(value, 0f, endAnchorTime);
-        AnchorsChanged?.Invoke();
-        TimelineSystem.Instance?.NotifyTrackAnchorsChanged();
+        TimelineKeyframe keyframe = FindKeyframe(keyframeId);
+        if (keyframe == null)
+        {
+            return;
+        }
+
+        float duration = TimelineSystem.Instance != null ? TimelineSystem.Instance.Duration : Mathf.Max(newTime, 1f);
+        keyframe.SetTime(Mathf.Clamp(newTime, 0f, duration));
+        KeyframesChanged?.Invoke();
     }
 
-    public void SetEndAnchorTime(float value)
+    public void AddKeyframe(float time, TrackState state)
     {
-        endAnchorTime = Mathf.Clamp(value, startAnchorTime, 1f);
-        AnchorsChanged?.Invoke();
-        TimelineSystem.Instance?.NotifyTrackAnchorsChanged();
+        float duration = TimelineSystem.Instance != null ? TimelineSystem.Instance.Duration : Mathf.Max(time, 1f);
+        keyframes.Add(new TimelineKeyframe(Mathf.Clamp(time, 0f, duration), state));
+        KeyframesChanged?.Invoke();
     }
 
-    public void SetEndStateFromCurrentTransform()
+    public void RemoveKeyframe(string keyframeId)
     {
-        endState = TrackState.FromTransform(transform);
+        for (int i = keyframes.Count - 1; i >= 0; i--)
+        {
+            if (keyframes[i].Id == keyframeId)
+            {
+                keyframes.RemoveAt(i);
+                KeyframesChanged?.Invoke();
+                return;
+            }
+        }
     }
 
-    [ContextMenu("Capture End State From Current Transform")]
-    void CaptureEndStateContextMenu()
+    public void CaptureKeyframeFromTransform(float time)
     {
-        SetEndStateFromCurrentTransform();
+        AddKeyframe(time, TrackState.FromTransform(transform));
     }
 
-    [ContextMenu("Capture Start State From Current Transform")]
-    void CaptureStartStateContextMenu()
+    TimelineKeyframe FindKeyframe(string keyframeId)
     {
-        startState = TrackState.FromTransform(transform);
+        for (int i = 0; i < keyframes.Count; i++)
+        {
+            if (keyframes[i].Id == keyframeId)
+            {
+                return keyframes[i];
+            }
+        }
+
+        return null;
+    }
+
+    void BuildSortedKeyframes()
+    {
+        sortedBuffer.Clear();
+        sortedBuffer.AddRange(keyframes);
+        sortedBuffer.Sort((a, b) => a.Time.CompareTo(b.Time));
     }
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(startState.position, 0.15f);
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(endState.position, 0.15f);
-        Gizmos.color = Color.white;
-        Gizmos.DrawLine(startState.position, endState.position);
+        if (keyframes == null || keyframes.Count == 0)
+        {
+            return;
+        }
+
+        BuildSortedKeyframes();
+        for (int i = 0; i < sortedBuffer.Count; i++)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(sortedBuffer[i].State.position, 0.12f);
+            if (i < sortedBuffer.Count - 1)
+            {
+                Gizmos.color = Color.white;
+                Gizmos.DrawLine(sortedBuffer[i].State.position, sortedBuffer[i + 1].State.position);
+            }
+        }
     }
 #endif
 }
