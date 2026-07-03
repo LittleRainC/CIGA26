@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
+[DefaultExecutionOrder(0)]
 public class TimelineTrack : MonoBehaviour
 {
     [Header("Identity")]
@@ -18,10 +19,24 @@ public class TimelineTrack : MonoBehaviour
 
     public event Action KeyframesChanged;
 
+    void OnEnable()
+    {
+        if (TimelineSystem.Instance != null)
+        {
+            TimelineSystem.Instance.RegisterTrack(this);
+            ApplyTime(TimelineSystem.Instance.CurrentTime);
+        }
+    }
+
     void Start()
     {
         TimelineSystem.Instance?.RegisterTrack(this);
         ApplyTime(TimelineSystem.Instance != null ? TimelineSystem.Instance.CurrentTime : 0f);
+    }
+
+    void OnDisable()
+    {
+        TimelineSystem.Instance?.UnregisterTrack(this);
     }
 
     void OnDestroy()
@@ -90,14 +105,20 @@ public class TimelineTrack : MonoBehaviour
         }
 
         float duration = TimelineSystem.Instance != null ? TimelineSystem.Instance.Duration : Mathf.Max(newTime, 1f);
-        keyframe.SetTime(Mathf.Clamp(newTime, 0f, duration));
+        float snappedTime = TimelineSystem.Instance != null
+            ? TimelineSystem.Instance.SnapTime(newTime)
+            : newTime;
+        keyframe.SetTime(Mathf.Clamp(snappedTime, 0f, duration));
         KeyframesChanged?.Invoke();
     }
 
     public void AddKeyframe(float time, TrackState state)
     {
         float duration = TimelineSystem.Instance != null ? TimelineSystem.Instance.Duration : Mathf.Max(time, 1f);
-        keyframes.Add(new TimelineKeyframe(Mathf.Clamp(time, 0f, duration), state));
+        float snappedTime = TimelineSystem.Instance != null
+            ? TimelineSystem.Instance.SnapTime(time)
+            : time;
+        keyframes.Add(new TimelineKeyframe(Mathf.Clamp(snappedTime, 0f, duration), state));
         KeyframesChanged?.Invoke();
     }
 

@@ -2,30 +2,27 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[DefaultExecutionOrder(-100)]
 public class TimelineSystem : MonoBehaviour
 {
     public static TimelineSystem Instance { get; private set; }
 
     [Header("Timeline")]
-    [SerializeField] float duration = 10f;
+    [SerializeField] float duration = 30f;
+    [SerializeField] float gridInterval = 5f;
 
     [Header("Input")]
     [SerializeField] KeyCode playKey = KeyCode.Space;
 
-    [Header("Debug")]
-    [SerializeField] bool allowDebugScrub = true;
-    [SerializeField] float debugCurrentTime;
-
     readonly List<TimelineTrack> tracks = new List<TimelineTrack>();
 
     public float Duration => duration;
+    public float GridInterval => gridInterval;
     public float CurrentTime { get; private set; }
-    public float NormalizedTime => duration <= Mathf.Epsilon ? 0f : Mathf.Clamp01(CurrentTime / duration);
     public bool IsPlaying { get; private set; }
     public IReadOnlyList<TimelineTrack> Tracks => tracks;
 
     public event Action<float> TimeChanged;
-    public event Action<bool> PlayStateChanged;
     public event Action TracksChanged;
 
     void Awake()
@@ -60,20 +57,15 @@ public class TimelineSystem : MonoBehaviour
             Play();
         }
 
-        if (IsPlaying)
+        if (!IsPlaying)
         {
-            SetTime(CurrentTime + Time.deltaTime);
-            if (CurrentTime >= duration)
-            {
-                FinishPlayback();
-            }
-
             return;
         }
 
-        if (allowDebugScrub && !Mathf.Approximately(debugCurrentTime, CurrentTime))
+        SetTime(CurrentTime + Time.deltaTime);
+        if (CurrentTime >= duration)
         {
-            SetTime(debugCurrentTime);
+            FinishPlayback();
         }
     }
 
@@ -108,18 +100,11 @@ public class TimelineSystem : MonoBehaviour
         }
 
         IsPlaying = true;
-        PlayStateChanged?.Invoke(true);
     }
 
     public void Pause()
     {
-        if (!IsPlaying)
-        {
-            return;
-        }
-
         IsPlaying = false;
-        PlayStateChanged?.Invoke(false);
     }
 
     public void ResetTimeline()
@@ -131,7 +116,6 @@ public class TimelineSystem : MonoBehaviour
     public void SetTime(float timeInSeconds)
     {
         CurrentTime = Mathf.Clamp(timeInSeconds, 0f, duration);
-        debugCurrentTime = CurrentTime;
         EvaluateAllTracks();
         TimeChanged?.Invoke(CurrentTime);
     }
@@ -159,7 +143,20 @@ public class TimelineSystem : MonoBehaviour
 
     public float NormalizedToTime(float normalized)
     {
-        return Mathf.Clamp01(normalized) * duration;
+        return SnapTime(Mathf.Clamp01(normalized) * duration);
+    }
+
+    public float SnapTime(float timeInSeconds)
+    {
+        timeInSeconds = Mathf.Clamp(timeInSeconds, 0f, duration);
+
+        if (gridInterval <= Mathf.Epsilon)
+        {
+            return timeInSeconds;
+        }
+
+        float snapped = Mathf.Round(timeInSeconds / gridInterval) * gridInterval;
+        return Mathf.Clamp(snapped, 0f, duration);
     }
 
     void FinishPlayback()

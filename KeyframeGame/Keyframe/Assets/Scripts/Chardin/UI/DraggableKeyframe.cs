@@ -9,10 +9,6 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     string keyframeId;
     float pendingTime;
-    bool isDragging;
-
-    public string KeyframeId => keyframeId;
-    public bool IsDragging => isDragging;
 
     public void Initialize(TrackRowUI row, string id, RectTransform bar)
     {
@@ -24,7 +20,6 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        isDragging = true;
         TimelineSystem.Instance?.Pause();
     }
 
@@ -45,8 +40,6 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        isDragging = false;
-
         if (rowUI == null || trackBar == null || TimelineSystem.Instance == null)
         {
             return;

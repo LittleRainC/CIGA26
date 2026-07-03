@@ -1,47 +1,31 @@
-using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+[DefaultExecutionOrder(100)]
 public class TimelinePanel : MonoBehaviour
 {
-    public static TimelinePanel Instance { get; private set; }
+    const float TrackRowHeight = 40f;
+
+    [Header("Timeline Layout")]
+    [SerializeField] float labelColumnWidth = 120f;
+    [SerializeField] float timelineContentWidth = 550f;
 
     [Header("References")]
     [SerializeField] TimelineSystem timelineSystem;
     [SerializeField] RectTransform playhead;
     [SerializeField] RectTransform playheadArea;
     [SerializeField] RectTransform trackRowsContainer;
-    [SerializeField] RectTransform trackDropZone;
     [SerializeField] TrackRowUI trackRowPrefab;
-    [SerializeField] Text timeLabel;
+    [SerializeField] TextMeshProUGUI timeLabel;
     [SerializeField] Button resetButton;
-    [SerializeField] GameObject emptyHint;
+    [SerializeField] TimelineRulerUI timelineRuler;
 
-    [Header("Optional Preload")]
-    [SerializeField] List<TimelineTrack> initialDisplayedTracks = new List<TimelineTrack>();
-
-    readonly List<TimelineTrack> displayedTracks = new List<TimelineTrack>();
     readonly List<TrackRowUI> trackRows = new List<TrackRowUI>();
-
-    Canvas rootCanvas;
-
-    public IReadOnlyList<TimelineTrack> DisplayedTracks => displayedTracks;
-
-    public event Action DisplayedTracksChanged;
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Debug.LogWarning("Multiple TimelinePanel instances found. Destroying duplicate.");
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-        rootCanvas = GetComponentInParent<Canvas>();
-
         if (timelineSystem == null)
         {
             timelineSystem = TimelineSystem.Instance;
@@ -52,28 +36,77 @@ public class TimelinePanel : MonoBehaviour
             resetButton.onClick.AddListener(OnResetClicked);
         }
 
-        if (trackDropZone == null)
-        {
-            trackDropZone = trackRowsContainer;
-        }
+        EnsureTrackRowsLayout();
+        SyncTrackRowsContainerLayout();
+        ApplyTimelineLayout();
     }
 
-    void OnDestroy()
+    void SyncTrackRowsContainerLayout()
     {
-        if (Instance == this)
+        if (trackRowsContainer == null)
         {
-            Instance = null;
+            return;
         }
+
+        RectTransform panelRect = transform as RectTransform;
+        RectTransform containerParent = trackRowsContainer.parent as RectTransform;
+        if (panelRect == null || containerParent == null)
+        {
+            return;
+        }
+
+        Vector3[] panelCorners = new Vector3[4];
+        panelRect.GetWorldCorners(panelCorners);
+
+        Vector2 localLeft = containerParent.InverseTransformPoint(panelCorners[0]);
+        Vector2 localRight = containerParent.InverseTransformPoint(panelCorners[3]);
+
+        float width = localRight.x - localLeft.x;
+        float centerX = (localLeft.x + localRight.x) * 0.5f;
+
+        trackRowsContainer.anchorMin = new Vector2(0.5f, trackRowsContainer.anchorMin.y);
+        trackRowsContainer.anchorMax = new Vector2(0.5f, trackRowsContainer.anchorMax.y);
+        trackRowsContainer.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+        trackRowsContainer.anchoredPosition = new Vector2(centerX, trackRowsContainer.anchoredPosition.y);
     }
 
-    void Start()
+    void ApplyTimelineLayout()
     {
-        for (int i = 0; i < initialDisplayedTracks.Count; i++)
+        if (playheadArea == null)
         {
-            TryAddDisplayedTrack(initialDisplayedTracks[i]);
+            return;
         }
 
-        RefreshEmptyHint();
+        playheadArea.pivot = new Vector2(0f, 0.5f);
+        playheadArea.anchorMin = new Vector2(0f, 0.5f);
+        playheadArea.anchorMax = new Vector2(0f, 0.5f);
+        playheadArea.anchoredPosition = new Vector2(labelColumnWidth, playheadArea.anchoredPosition.y);
+        playheadArea.sizeDelta = new Vector2(timelineContentWidth, playheadArea.sizeDelta.y);
+        SyncTrackRowsContainerLayout();
+    }
+
+    TimelineLayoutSettings GetLayoutSettings()
+    {
+        return new TimelineLayoutSettings(labelColumnWidth, timelineContentWidth);
+    }
+
+    void EnsureTrackRowsLayout()
+    {
+        if (trackRowsContainer == null)
+        {
+            return;
+        }
+
+        if (trackRowsContainer.GetComponent<VerticalLayoutGroup>() == null)
+        {
+            VerticalLayoutGroup layout = trackRowsContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+        }
     }
 
     void OnEnable()
@@ -86,10 +119,18 @@ public class TimelinePanel : MonoBehaviour
         if (timelineSystem != null)
         {
             timelineSystem.TimeChanged += HandleTimeChanged;
-            timelineSystem.PlayStateChanged += HandlePlayStateChanged;
+            timelineSystem.TracksChanged += RebuildTrackRows;
         }
 
+        RebuildTrackRows();
+        ApplyTimelineLayout();
         RefreshPlayhead(timelineSystem != null ? timelineSystem.CurrentTime : 0f);
+    }
+
+    void Start()
+    {
+        ApplyTimelineLayout();
+        RebuildTrackRows();
     }
 
     void OnDisable()
@@ -97,58 +138,8 @@ public class TimelinePanel : MonoBehaviour
         if (timelineSystem != null)
         {
             timelineSystem.TimeChanged -= HandleTimeChanged;
-            timelineSystem.PlayStateChanged -= HandlePlayStateChanged;
+            timelineSystem.TracksChanged -= RebuildTrackRows;
         }
-    }
-
-    public bool IsTrackDisplayed(TimelineTrack track)
-    {
-        return track != null && displayedTracks.Contains(track);
-    }
-
-    public bool TryAddDisplayedTrack(TimelineTrack track)
-    {
-        if (track == null || displayedTracks.Contains(track))
-        {
-            return false;
-        }
-
-        displayedTracks.Add(track);
-        RebuildTrackRows();
-        RefreshEmptyHint();
-        DisplayedTracksChanged?.Invoke();
-        return true;
-    }
-
-    public void RemoveDisplayedTrack(TimelineTrack track)
-    {
-        if (track == null || !displayedTracks.Remove(track))
-        {
-            return;
-        }
-
-        RebuildTrackRows();
-        RefreshEmptyHint();
-        DisplayedTracksChanged?.Invoke();
-    }
-
-    public bool IsPointerOverDropZone(Vector2 screenPosition)
-    {
-        if (trackDropZone == null)
-        {
-            return false;
-        }
-
-        Camera eventCamera = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
-            ? rootCanvas.worldCamera
-            : null;
-
-        return RectTransformUtility.RectangleContainsScreenPoint(trackDropZone, screenPosition, eventCamera);
-    }
-
-    public void HandleTrackDrop(TimelineTrack track)
-    {
-        TryAddDisplayedTrack(track);
     }
 
     void OnResetClicked()
@@ -161,11 +152,6 @@ public class TimelinePanel : MonoBehaviour
         RefreshPlayhead(currentTime);
     }
 
-    void HandlePlayStateChanged(bool isPlaying)
-    {
-        RefreshTimeLabel(timelineSystem != null ? timelineSystem.CurrentTime : 0f);
-    }
-
     void RefreshPlayhead(float currentTime)
     {
         if (playhead == null || playheadArea == null || timelineSystem == null)
@@ -173,10 +159,12 @@ public class TimelinePanel : MonoBehaviour
             return;
         }
 
+        playhead.pivot = new Vector2(0f, 0.5f);
+        playhead.anchorMin = new Vector2(0f, 0.5f);
+        playhead.anchorMax = new Vector2(0f, 0.5f);
+
         float normalized = timelineSystem.TimeToNormalized(currentTime);
-        Vector2 anchoredPosition = playhead.anchoredPosition;
-        anchoredPosition.x = normalized * playheadArea.rect.width;
-        playhead.anchoredPosition = anchoredPosition;
+        playhead.anchoredPosition = new Vector2(normalized * playheadArea.rect.width, playhead.anchoredPosition.y);
         RefreshTimeLabel(currentTime);
     }
 
@@ -199,12 +187,40 @@ public class TimelinePanel : MonoBehaviour
             return;
         }
 
-        for (int i = 0; i < displayedTracks.Count; i++)
+        ApplyTimelineLayout();
+        Canvas.ForceUpdateCanvases();
+
+        IReadOnlyList<TimelineTrack> tracks = timelineSystem.Tracks;
+        for (int i = 0; i < tracks.Count; i++)
         {
             TrackRowUI row = Instantiate(trackRowPrefab, trackRowsContainer);
-            row.Bind(displayedTracks[i], timelineSystem);
+            SetupTrackRowLayout(row.transform as RectTransform);
+            row.Bind(tracks[i], timelineSystem, GetLayoutSettings(), playheadArea);
             trackRows.Add(row);
         }
+
+        Canvas.ForceUpdateCanvases();
+        for (int i = 0; i < trackRows.Count; i++)
+        {
+            trackRows[i].RefreshLayout();
+        }
+
+        timelineRuler?.Rebuild();
+    }
+
+    static void SetupTrackRowLayout(RectTransform rowRect)
+    {
+        if (rowRect == null)
+        {
+            return;
+        }
+
+        rowRect.localScale = Vector3.one;
+        rowRect.anchorMin = new Vector2(0f, 1f);
+        rowRect.anchorMax = new Vector2(1f, 1f);
+        rowRect.pivot = new Vector2(0.5f, 1f);
+        rowRect.anchoredPosition = Vector2.zero;
+        rowRect.sizeDelta = new Vector2(0f, TrackRowHeight);
     }
 
     void ClearTrackRows()
@@ -218,13 +234,5 @@ public class TimelinePanel : MonoBehaviour
         }
 
         trackRows.Clear();
-    }
-
-    void RefreshEmptyHint()
-    {
-        if (emptyHint != null)
-        {
-            emptyHint.SetActive(displayedTracks.Count == 0);
-        }
     }
 }
