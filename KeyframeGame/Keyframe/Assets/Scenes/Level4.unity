@@ -724,7 +724,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 70}
+  m_AnchoredPosition: {x: 80, y: 70}
   m_SizeDelta: {x: 800, y: 3}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &358593697
@@ -2513,7 +2513,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -60, y: 35}
+  m_AnchoredPosition: {x: 20, y: 35}
   m_SizeDelta: {x: 860, y: 20}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &1372395436
@@ -2572,7 +2572,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 8
+  m_Spacing: 16
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
@@ -3851,7 +3851,7 @@ MonoBehaviour:
   trackRowsY: 35
   trackRowsHeight: 20
   trackRowHeight: 40
-  trackRowSpacing: 8
+  trackRowSpacing: 16
   centerTimelineContent: 1
   timelineSystem: {fileID: 1272055441}
   playhead: {fileID: 645629985}
