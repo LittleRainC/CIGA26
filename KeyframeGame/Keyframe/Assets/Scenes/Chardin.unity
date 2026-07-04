@@ -1321,6 +1321,7 @@ MonoBehaviour:
   trackRowsHeight: 20
   trackRowHeight: 0
   trackRowSpacing: 8
+  centerTimelineContent: 1
   timelineSystem: {fileID: 1272055441}
   playhead: {fileID: 645629985}
   playheadArea: {fileID: 358593696}

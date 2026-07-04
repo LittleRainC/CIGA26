@@ -26,6 +26,8 @@ public class TimelinePanel : MonoBehaviour
     [SerializeField] float trackRowHeight = 40f;
     [Tooltip("TrackRow 之间的间距。")]
     [SerializeField] float trackRowSpacing = 8f;
+    [Tooltip("勾选后时间轴内容在 Panel 内水平居中。")]
+    [SerializeField] bool centerTimelineContent = true;
 
     [Header("References")]
     [SerializeField] TimelineSystem timelineSystem;
@@ -58,6 +60,8 @@ public class TimelinePanel : MonoBehaviour
 
     void OnValidate()
     {
+        labelOffsetX = Mathf.Max(0f, labelOffsetX);
+        trackRowHeight = Mathf.Max(40f, trackRowHeight);
         ApplyPanelLayout();
     }
 
@@ -85,15 +89,45 @@ public class TimelinePanel : MonoBehaviour
         panel.sizeDelta = new Vector2(0f, panelHeight);
     }
 
+    float GetTimelineContentLeft()
+    {
+        if (!centerTimelineContent)
+        {
+            return labelColumnWidth;
+        }
+
+        RectTransform panel = transform as RectTransform;
+        if (panel == null)
+        {
+            return labelColumnWidth;
+        }
+
+        return Mathf.Max(0f, (panel.rect.width - timelineContentWidth) * 0.5f);
+    }
+
+    float GetTrackRowsLeft()
+    {
+        if (!centerTimelineContent)
+        {
+            return 0f;
+        }
+
+        return GetTimelineContentLeft() - labelColumnWidth;
+    }
+
     void ApplyHeaderLayout()
     {
+        float rowsLeft = GetTrackRowsLeft();
+
         if (timeLabel != null)
         {
             RectTransform labelRect = timeLabel.rectTransform;
             labelRect.pivot = new Vector2(0f, 1f);
             labelRect.anchorMin = new Vector2(0f, 1f);
             labelRect.anchorMax = new Vector2(0f, 1f);
-            labelRect.anchoredPosition = new Vector2(8f, -8f);
+            labelRect.anchoredPosition = new Vector2(
+                centerTimelineContent ? rowsLeft + 8f : 8f,
+                -8f);
         }
 
         if (resetButton != null)
@@ -116,7 +150,7 @@ public class TimelinePanel : MonoBehaviour
         playheadArea.pivot = new Vector2(0f, 0f);
         playheadArea.anchorMin = new Vector2(0f, 0f);
         playheadArea.anchorMax = new Vector2(0f, 0f);
-        playheadArea.anchoredPosition = new Vector2(labelColumnWidth, playheadAreaY);
+        playheadArea.anchoredPosition = new Vector2(GetTimelineContentLeft(), playheadAreaY);
         playheadArea.sizeDelta = new Vector2(timelineContentWidth, playheadArea.sizeDelta.y);
     }
 
@@ -127,11 +161,24 @@ public class TimelinePanel : MonoBehaviour
             return;
         }
 
-        trackRowsContainer.pivot = new Vector2(0.5f, 0f);
-        trackRowsContainer.anchorMin = new Vector2(0f, 0f);
-        trackRowsContainer.anchorMax = new Vector2(1f, 0f);
-        trackRowsContainer.anchoredPosition = new Vector2(0f, trackRowsY);
-        trackRowsContainer.sizeDelta = new Vector2(0f, trackRowsHeight);
+        float totalWidth = labelColumnWidth + timelineContentWidth;
+
+        if (centerTimelineContent)
+        {
+            trackRowsContainer.pivot = new Vector2(0f, 0f);
+            trackRowsContainer.anchorMin = new Vector2(0f, 0f);
+            trackRowsContainer.anchorMax = new Vector2(0f, 0f);
+            trackRowsContainer.anchoredPosition = new Vector2(GetTrackRowsLeft(), trackRowsY);
+            trackRowsContainer.sizeDelta = new Vector2(totalWidth, trackRowsHeight);
+        }
+        else
+        {
+            trackRowsContainer.pivot = new Vector2(0.5f, 0f);
+            trackRowsContainer.anchorMin = new Vector2(0f, 0f);
+            trackRowsContainer.anchorMax = new Vector2(1f, 0f);
+            trackRowsContainer.anchoredPosition = new Vector2(0f, trackRowsY);
+            trackRowsContainer.sizeDelta = new Vector2(0f, trackRowsHeight);
+        }
     }
 
     TimelineLayoutSettings GetLayoutSettings()
@@ -290,7 +337,7 @@ public class TimelinePanel : MonoBehaviour
         rowRect.anchorMin = new Vector2(0f, 1f);
         rowRect.anchorMax = new Vector2(1f, 1f);
         rowRect.anchoredPosition = Vector2.zero;
-        rowRect.sizeDelta = new Vector2(0f, trackRowHeight);
+        rowRect.sizeDelta = new Vector2(0f, Mathf.Max(40f, trackRowHeight));
         rowRect.offsetMin = new Vector2(0f, rowRect.offsetMin.y);
         rowRect.offsetMax = new Vector2(0f, rowRect.offsetMax.y);
     }
