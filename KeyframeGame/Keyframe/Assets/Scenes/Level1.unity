@@ -1369,7 +1369,7 @@ MonoBehaviour:
   - id: 0
     time: 0
     state:
-      position: {x: 0.052968264, y: -1.1477675, z: 0}
+      position: {x: 0.052968264, y: -1.5, z: 0}
       rotationZ: 0
       scale: {x: 3, y: 0.5, z: 1}
   - id: 5
