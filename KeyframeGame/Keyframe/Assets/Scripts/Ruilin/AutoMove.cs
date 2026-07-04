@@ -1,18 +1,30 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class AutoMove : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    [Header("Movement")]
+    [SerializeField] private float moveSpeed = 3f;
+
+    private Rigidbody2D rb;
+
+    void Awake()
     {
-        
+        rb = GetComponent<Rigidbody2D>();
     }
 
-    // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        
+        rb.velocity = new Vector2(moveSpeed, rb.velocity.y);
+    }
+
+    public void SetMoveSpeed(float speed)
+    {
+        moveSpeed = speed;
+    }
+
+    public float GetMoveSpeed()
+    {
+        return moveSpeed;
     }
 }
