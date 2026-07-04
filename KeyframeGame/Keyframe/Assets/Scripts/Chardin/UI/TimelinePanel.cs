@@ -11,6 +11,10 @@ public class TimelinePanel : MonoBehaviour
     [Header("Timeline Layout")]
     [SerializeField] float labelColumnWidth = 120f;
     [SerializeField] float timelineContentWidth = 550f;
+    [Tooltip("Label 文字相对默认位置的左右偏移。负值 = 往左，正值 = 往右。不影响轨道条对齐。")]
+    [SerializeField] float labelOffsetX = -15f;
+    [Tooltip("开启后 TrackRows 宽度会自动跟 TimelinePanel 对齐；关闭后可手动调整 TrackRows 的位置和大小。")]
+    [SerializeField] bool autoSyncTrackRowsLayout = true;
 
     [Header("References")]
     [SerializeField] TimelineSystem timelineSystem;
@@ -45,7 +49,7 @@ public class TimelinePanel : MonoBehaviour
 
     void SyncTrackRowsContainerLayout()
     {
-        if (trackRowsContainer == null)
+        if (!autoSyncTrackRowsLayout || trackRowsContainer == null)
         {
             return;
         }
@@ -89,7 +93,7 @@ public class TimelinePanel : MonoBehaviour
 
     TimelineLayoutSettings GetLayoutSettings()
     {
-        return new TimelineLayoutSettings(labelColumnWidth, timelineContentWidth);
+        return new TimelineLayoutSettings(labelColumnWidth, timelineContentWidth, labelOffsetX);
     }
 
     void EnsureTrackRowsLayout()

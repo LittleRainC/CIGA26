@@ -112,7 +112,10 @@ public class TrackRowUI : MonoBehaviour
         float labelWidth = (refLeft - rowLeft) / rowRect.lossyScale.x;
         float contentWidth = (refRight - refLeft) / timelineContentReference.lossyScale.x;
 
-        layout = new TimelineLayoutSettings(Mathf.Max(0f, labelWidth), Mathf.Max(0f, contentWidth));
+        layout = new TimelineLayoutSettings(
+            Mathf.Max(0f, labelWidth),
+            Mathf.Max(0f, contentWidth),
+            layout.labelOffsetX);
         SetupLabelLayout();
     }
 
@@ -127,7 +130,7 @@ public class TrackRowUI : MonoBehaviour
         labelRect.pivot = new Vector2(0f, 0.5f);
         labelRect.anchorMin = new Vector2(0f, 0.5f);
         labelRect.anchorMax = new Vector2(0f, 0.5f);
-        labelRect.anchoredPosition = Vector2.zero;
+        labelRect.anchoredPosition = new Vector2(layout.labelOffsetX, 0f);
         labelRect.sizeDelta = new Vector2(layout.labelColumnWidth, labelRect.sizeDelta.y);
     }
 
