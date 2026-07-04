@@ -7,6 +7,7 @@ public class LoadLevel : MonoBehaviour
 
     private void OnMouseDown()
     {
+        Debug.Log("StartButton clicked");
         SceneManager.LoadScene(sceneName);
     }
 }
