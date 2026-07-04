@@ -72,6 +72,29 @@ public class TimelinePanel : MonoBehaviour
         EnsureTrackRowsLayout();
         ApplyPlayheadAreaLayout();
         ApplyTrackRowsLayout();
+        RefreshPlayhead(GetCurrentTimeForLayout());
+    }
+
+    float GetCurrentTimeForLayout()
+    {
+        if (timelineSystem == null)
+        {
+            timelineSystem = TimelineSystem.Instance;
+        }
+
+        return timelineSystem != null ? timelineSystem.CurrentTime : 0f;
+    }
+
+    void SetupPlayheadTransform()
+    {
+        if (playhead == null)
+        {
+            return;
+        }
+
+        playhead.pivot = new Vector2(0.5f, 0.5f);
+        playhead.anchorMin = new Vector2(0f, 0.5f);
+        playhead.anchorMax = new Vector2(0f, 0.5f);
     }
 
     void ApplyPanelSelfLayout()
@@ -237,6 +260,7 @@ public class TimelinePanel : MonoBehaviour
 
         ApplyPanelLayout();
         RebuildTrackRows();
+        RefreshPlayhead(GetCurrentTimeForLayout());
     }
 
     void OnDisable()
@@ -262,17 +286,32 @@ public class TimelinePanel : MonoBehaviour
 
     void RefreshPlayhead(float currentTime)
     {
-        if (playhead == null || playheadArea == null || timelineSystem == null)
+        if (playhead == null || playheadArea == null)
         {
             return;
         }
 
-        playhead.pivot = new Vector2(0f, 0.5f);
-        playhead.anchorMin = new Vector2(0f, 0.5f);
-        playhead.anchorMax = new Vector2(0f, 0.5f);
+        SetupPlayheadTransform();
+
+        if (timelineSystem == null)
+        {
+            timelineSystem = TimelineSystem.Instance;
+        }
+
+        if (timelineSystem == null)
+        {
+            playhead.anchoredPosition = new Vector2(0f, playhead.anchoredPosition.y);
+            return;
+        }
+
+        float areaWidth = playheadArea.rect.width;
+        if (areaWidth <= Mathf.Epsilon)
+        {
+            areaWidth = timelineContentWidth;
+        }
 
         float normalized = timelineSystem.TimeToNormalized(currentTime);
-        playhead.anchoredPosition = new Vector2(normalized * playheadArea.rect.width, playhead.anchoredPosition.y);
+        playhead.anchoredPosition = new Vector2(normalized * areaWidth, playhead.anchoredPosition.y);
         RefreshTimeLabel(currentTime);
     }
 

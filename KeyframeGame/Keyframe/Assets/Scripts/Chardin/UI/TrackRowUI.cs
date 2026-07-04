@@ -255,7 +255,7 @@ public class TrackRowUI : MonoBehaviour
         handle.SetParent(trackBar, false);
         handle.anchorMin = new Vector2(0f, 0.5f);
         handle.anchorMax = new Vector2(0f, 0.5f);
-        handle.pivot = new Vector2(0f, 0.5f);
+        handle.pivot = new Vector2(0.5f, 0.5f);
         handle.localScale = Vector3.one;
 
         float normalized = timelineSystem.TimeToNormalized(timeInSeconds);
