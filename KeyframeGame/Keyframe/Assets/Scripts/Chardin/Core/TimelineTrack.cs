@@ -14,6 +14,8 @@ public class TimelineTrack : MonoBehaviour
 
     readonly List<TimelineKeyframe> sortedBuffer = new List<TimelineKeyframe>();
 
+    const float MinKeyframeSeparation = 0.1f;
+
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
     public IReadOnlyList<TimelineKeyframe> Keyframes => keyframes;
 
@@ -104,12 +106,104 @@ public class TimelineTrack : MonoBehaviour
             return;
         }
 
-        float duration = TimelineSystem.Instance != null ? TimelineSystem.Instance.Duration : Mathf.Max(newTime, 1f);
-        float snappedTime = TimelineSystem.Instance != null
-            ? TimelineSystem.Instance.SnapTime(newTime)
-            : newTime;
+        TimelineSystem system = TimelineSystem.Instance;
+        float duration = system != null ? system.Duration : Mathf.Max(newTime, 1f);
+        float snappedTime = system != null ? system.SnapTime(newTime) : newTime;
+        snappedTime = ResolveGridTime(keyframeId, snappedTime, newTime, duration);
+
         keyframe.SetTime(Mathf.Clamp(snappedTime, 0f, duration));
         KeyframesChanged?.Invoke();
+    }
+
+    float ResolveGridTime(string movedKeyframeId, float snappedTime, float dragReferenceTime, float duration)
+    {
+        if (!HasTimeConflict(movedKeyframeId, snappedTime))
+        {
+            return snappedTime;
+        }
+
+        TimelineSystem system = TimelineSystem.Instance;
+        float gridStep = system != null ? system.GridInterval : 5f;
+        if (gridStep <= Mathf.Epsilon)
+        {
+            return snappedTime;
+        }
+
+        float candidateUp = Mathf.Clamp(snappedTime + gridStep, 0f, duration);
+        float candidateDown = Mathf.Clamp(snappedTime - gridStep, 0f, duration);
+
+        TimelineKeyframe neighbor = GetClosestOtherKeyframe(movedKeyframeId, snappedTime);
+        bool preferUp = neighbor == null || dragReferenceTime >= neighbor.Time;
+
+        if (preferUp)
+        {
+            if (candidateUp != snappedTime && !HasTimeConflict(movedKeyframeId, candidateUp))
+            {
+                return candidateUp;
+            }
+
+            if (candidateDown != snappedTime && !HasTimeConflict(movedKeyframeId, candidateDown))
+            {
+                return candidateDown;
+            }
+        }
+        else
+        {
+            if (candidateDown != snappedTime && !HasTimeConflict(movedKeyframeId, candidateDown))
+            {
+                return candidateDown;
+            }
+
+            if (candidateUp != snappedTime && !HasTimeConflict(movedKeyframeId, candidateUp))
+            {
+                return candidateUp;
+            }
+        }
+
+        return snappedTime;
+    }
+
+    bool HasTimeConflict(string movedKeyframeId, float time)
+    {
+        for (int i = 0; i < keyframes.Count; i++)
+        {
+            TimelineKeyframe other = keyframes[i];
+            if (other.Id == movedKeyframeId)
+            {
+                continue;
+            }
+
+            if (Mathf.Abs(other.Time - time) < MinKeyframeSeparation)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    TimelineKeyframe GetClosestOtherKeyframe(string movedKeyframeId, float time)
+    {
+        TimelineKeyframe closest = null;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < keyframes.Count; i++)
+        {
+            TimelineKeyframe other = keyframes[i];
+            if (other.Id == movedKeyframeId)
+            {
+                continue;
+            }
+
+            float distance = Mathf.Abs(other.Time - time);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = other;
+            }
+        }
+
+        return closest;
     }
 
     public void AddKeyframe(float time, TrackState state)
