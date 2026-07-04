@@ -24,6 +24,7 @@ public class TimelineSystem : MonoBehaviour
 
     public event Action<float> TimeChanged;
     public event Action TracksChanged;
+    public event Action TimelineReset;
 
     void Awake()
     {
@@ -111,6 +112,7 @@ public class TimelineSystem : MonoBehaviour
     {
         Pause();
         SetTime(0f);
+        TimelineReset?.Invoke();
     }
 
     public void SetTime(float timeInSeconds)
@@ -163,5 +165,6 @@ public class TimelineSystem : MonoBehaviour
     {
         Pause();
         SetTime(0f);
+        TimelineReset?.Invoke();
     }
 }
