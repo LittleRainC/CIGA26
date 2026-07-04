@@ -48,7 +48,10 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
             return;
         }
 
-        rowUI.UpdateHandlePreview(keyframeId, pendingTime);
+        float previewTime = TimelineSystem.Instance != null
+            ? TimelineSystem.Instance.SnapTime(pendingTime)
+            : pendingTime;
+        rowUI.UpdateHandlePreview(keyframeId, previewTime);
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -90,7 +93,7 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
         }
 
         float normalized = Mathf.Clamp01(localPoint.x / trackBar.rect.width);
-        timeInSeconds = TimelineSystem.Instance.NormalizedToTime(normalized);
+        timeInSeconds = TimelineSystem.Instance.Duration * normalized;
         return true;
     }
 }
