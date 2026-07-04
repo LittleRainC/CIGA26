@@ -117,17 +117,13 @@ public class TimelinePanel : MonoBehaviour
 
     void ApplyHeaderLayout()
     {
-        float rowsLeft = GetTrackRowsLeft();
-
         if (timeLabel != null)
         {
             RectTransform labelRect = timeLabel.rectTransform;
             labelRect.pivot = new Vector2(0f, 1f);
             labelRect.anchorMin = new Vector2(0f, 1f);
             labelRect.anchorMax = new Vector2(0f, 1f);
-            labelRect.anchoredPosition = new Vector2(
-                centerTimelineContent ? rowsLeft + 8f : 8f,
-                -8f);
+            labelRect.anchoredPosition = new Vector2(8f, -8f);
         }
 
         if (resetButton != null)
