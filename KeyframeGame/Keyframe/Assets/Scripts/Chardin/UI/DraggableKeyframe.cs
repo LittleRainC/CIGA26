@@ -30,12 +30,15 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        TimelineSystem.Instance?.Pause();
+        if (!CanDrag())
+        {
+            return;
+        }
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (rowUI == null || trackBar == null || TimelineSystem.Instance == null)
+        if (!CanDrag() || rowUI == null || trackBar == null)
         {
             return;
         }
@@ -50,7 +53,7 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (rowUI == null || trackBar == null || TimelineSystem.Instance == null)
+        if (!CanDrag() || rowUI == null || trackBar == null)
         {
             return;
         }
@@ -61,6 +64,12 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
         }
 
         rowUI.CommitKeyframeTime(keyframeId, pendingTime);
+    }
+
+    static bool CanDrag()
+    {
+        TimelineSystem system = TimelineSystem.Instance;
+        return system != null && !system.IsPlaying;
     }
 
     bool TryGetTimeFromPointer(PointerEventData eventData, out float timeInSeconds)
