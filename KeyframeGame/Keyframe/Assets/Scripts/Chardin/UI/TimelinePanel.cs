@@ -4,17 +4,28 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DefaultExecutionOrder(100)]
+[ExecuteAlways]
 public class TimelinePanel : MonoBehaviour
 {
-    const float TrackRowHeight = 40f;
+    [Header("Panel")]
+    [Tooltip("TimelinePanel 贴屏幕底边的高度。")]
+    [SerializeField] float panelHeight = 200f;
 
     [Header("Timeline Layout")]
     [SerializeField] float labelColumnWidth = 120f;
     [SerializeField] float timelineContentWidth = 550f;
-    [Tooltip("Label 文字相对行左缘的内边距。不要设负数，否则文字会跑出屏幕。")]
+    [Tooltip("Label 文字相对行左缘的内边距。不要设负数。")]
     [SerializeField] float labelOffsetX = 4f;
-    [Tooltip("PlayheadArea 在 TimelinePanel 内的 Y 位置，保存在场景里可团队同步。")]
-    [SerializeField] float playheadAreaY = 35f;
+    [Tooltip("PlayheadArea 底边距 Panel 底边的距离。")]
+    [SerializeField] float playheadAreaY = 70f;
+    [Tooltip("TrackRows 底边距 Panel 底边的距离。")]
+    [SerializeField] float trackRowsY = 20f;
+    [Tooltip("TrackRows 容器高度。")]
+    [SerializeField] float trackRowsHeight = 58f;
+    [Tooltip("每条 TrackRow 的高度。")]
+    [SerializeField] float trackRowHeight = 40f;
+    [Tooltip("TrackRow 之间的间距。")]
+    [SerializeField] float trackRowSpacing = 8f;
 
     [Header("References")]
     [SerializeField] TimelineSystem timelineSystem;
@@ -37,27 +48,90 @@ public class TimelinePanel : MonoBehaviour
             timelineSystem = TimelineSystem.Instance;
         }
 
-        if (resetButton != null)
+        if (Application.isPlaying && resetButton != null)
         {
             resetButton.onClick.AddListener(OnResetClicked);
         }
 
-        EnsureTrackRowsLayout();
-        ApplySharedLayout();
+        ApplyPanelLayout();
     }
 
-    void ApplySharedLayout()
+    void OnValidate()
+    {
+        ApplyPanelLayout();
+    }
+
+    void ApplyPanelLayout()
+    {
+        ApplyPanelSelfLayout();
+        ApplyHeaderLayout();
+        EnsureTrackRowsLayout();
+        ApplyPlayheadAreaLayout();
+        ApplyTrackRowsLayout();
+    }
+
+    void ApplyPanelSelfLayout()
+    {
+        RectTransform panel = transform as RectTransform;
+        if (panel == null)
+        {
+            return;
+        }
+
+        panel.pivot = new Vector2(0.5f, 0f);
+        panel.anchorMin = new Vector2(0f, 0f);
+        panel.anchorMax = new Vector2(1f, 0f);
+        panel.anchoredPosition = Vector2.zero;
+        panel.sizeDelta = new Vector2(0f, panelHeight);
+    }
+
+    void ApplyHeaderLayout()
+    {
+        if (timeLabel != null)
+        {
+            RectTransform labelRect = timeLabel.rectTransform;
+            labelRect.pivot = new Vector2(0f, 1f);
+            labelRect.anchorMin = new Vector2(0f, 1f);
+            labelRect.anchorMax = new Vector2(0f, 1f);
+            labelRect.anchoredPosition = new Vector2(8f, -8f);
+        }
+
+        if (resetButton != null)
+        {
+            RectTransform buttonRect = resetButton.transform as RectTransform;
+            buttonRect.pivot = new Vector2(1f, 1f);
+            buttonRect.anchorMin = new Vector2(1f, 1f);
+            buttonRect.anchorMax = new Vector2(1f, 1f);
+            buttonRect.anchoredPosition = new Vector2(-8f, -8f);
+        }
+    }
+
+    void ApplyPlayheadAreaLayout()
     {
         if (playheadArea == null)
         {
             return;
         }
 
-        playheadArea.pivot = new Vector2(0f, 0.5f);
-        playheadArea.anchorMin = new Vector2(0f, 0.5f);
-        playheadArea.anchorMax = new Vector2(0f, 0.5f);
+        playheadArea.pivot = new Vector2(0f, 0f);
+        playheadArea.anchorMin = new Vector2(0f, 0f);
+        playheadArea.anchorMax = new Vector2(0f, 0f);
         playheadArea.anchoredPosition = new Vector2(labelColumnWidth, playheadAreaY);
         playheadArea.sizeDelta = new Vector2(timelineContentWidth, playheadArea.sizeDelta.y);
+    }
+
+    void ApplyTrackRowsLayout()
+    {
+        if (trackRowsContainer == null)
+        {
+            return;
+        }
+
+        trackRowsContainer.pivot = new Vector2(0.5f, 0f);
+        trackRowsContainer.anchorMin = new Vector2(0f, 0f);
+        trackRowsContainer.anchorMax = new Vector2(1f, 0f);
+        trackRowsContainer.anchoredPosition = new Vector2(0f, trackRowsY);
+        trackRowsContainer.sizeDelta = new Vector2(0f, trackRowsHeight);
     }
 
     TimelineLayoutSettings GetLayoutSettings()
@@ -78,7 +152,7 @@ public class TimelinePanel : MonoBehaviour
             layout = trackRowsContainer.gameObject.AddComponent<VerticalLayoutGroup>();
         }
 
-        layout.spacing = 8f;
+        layout.spacing = trackRowSpacing;
         layout.padding = new RectOffset(0, 0, 0, 0);
         layout.childAlignment = TextAnchor.UpperLeft;
         layout.childControlWidth = true;
@@ -94,30 +168,43 @@ public class TimelinePanel : MonoBehaviour
             timelineSystem = TimelineSystem.Instance;
         }
 
-        if (timelineSystem != null)
+        if (Application.isPlaying && timelineSystem != null)
         {
             timelineSystem.TimeChanged += HandleTimeChanged;
             timelineSystem.TracksChanged += RebuildTrackRows;
         }
 
-        ApplySharedLayout();
+        ApplyPanelLayout();
+
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
         RebuildTrackRows();
         RefreshPlayhead(timelineSystem != null ? timelineSystem.CurrentTime : 0f);
     }
 
     void Start()
     {
-        ApplySharedLayout();
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
+        ApplyPanelLayout();
         RebuildTrackRows();
     }
 
     void OnDisable()
     {
-        if (timelineSystem != null)
+        if (!Application.isPlaying || timelineSystem == null)
         {
-            timelineSystem.TimeChanged -= HandleTimeChanged;
-            timelineSystem.TracksChanged -= RebuildTrackRows;
+            return;
         }
+
+        timelineSystem.TimeChanged -= HandleTimeChanged;
+        timelineSystem.TracksChanged -= RebuildTrackRows;
     }
 
     void OnResetClicked()
@@ -165,7 +252,7 @@ public class TimelinePanel : MonoBehaviour
             return;
         }
 
-        ApplySharedLayout();
+        ApplyPanelLayout();
         Canvas.ForceUpdateCanvases();
 
         IReadOnlyList<TimelineTrack> tracks = timelineSystem.Tracks;
@@ -191,7 +278,7 @@ public class TimelinePanel : MonoBehaviour
         timelineRuler?.Rebuild();
     }
 
-    static void SetupTrackRowLayout(RectTransform rowRect)
+    void SetupTrackRowLayout(RectTransform rowRect)
     {
         if (rowRect == null)
         {
@@ -203,7 +290,7 @@ public class TimelinePanel : MonoBehaviour
         rowRect.anchorMin = new Vector2(0f, 1f);
         rowRect.anchorMax = new Vector2(1f, 1f);
         rowRect.anchoredPosition = Vector2.zero;
-        rowRect.sizeDelta = new Vector2(0f, TrackRowHeight);
+        rowRect.sizeDelta = new Vector2(0f, trackRowHeight);
         rowRect.offsetMin = new Vector2(0f, rowRect.offsetMin.y);
         rowRect.offsetMax = new Vector2(0f, rowRect.offsetMax.y);
     }
@@ -215,10 +302,27 @@ public class TimelinePanel : MonoBehaviour
             if (trackRows[i] != null)
             {
                 trackRows[i].Unbind();
-                Destroy(trackRows[i].gameObject);
+                DestroyImmediateSafe(trackRows[i].gameObject);
             }
         }
 
         trackRows.Clear();
+    }
+
+    static void DestroyImmediateSafe(Object target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(target);
+        }
+        else
+        {
+            DestroyImmediate(target);
+        }
     }
 }
