@@ -16,7 +16,6 @@ public class TrackRowUI : MonoBehaviour
     TimelineTrack track;
     TimelineSystem timelineSystem;
     TimelineLayoutSettings layout;
-    RectTransform timelineContentReference;
     DraggableKeyframe handlePrefab;
     RectTransform linePrefab;
 
@@ -26,12 +25,10 @@ public class TrackRowUI : MonoBehaviour
         TimelineTrack boundTrack,
         TimelineSystem system,
         TimelineLayoutSettings layoutSettings,
-        RectTransform contentReference,
         DraggableKeyframe handlePrefabOverride,
         RectTransform gridLinePrefabOverride)
     {
         layout = layoutSettings;
-        timelineContentReference = contentReference;
         handlePrefab = handlePrefabOverride != null ? handlePrefabOverride : keyframeHandlePrefab;
         linePrefab = gridLinePrefabOverride != null ? gridLinePrefabOverride : gridLinePrefab;
 
@@ -53,8 +50,7 @@ public class TrackRowUI : MonoBehaviour
             labelText.text = track.DisplayName;
         }
 
-        AlignRowToTimelineContent();
-        SetupTrackBarLayout();
+        ApplyLayoutSettings();
         if (trackBar != null)
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(trackBar);
@@ -66,8 +62,7 @@ public class TrackRowUI : MonoBehaviour
 
     public void RefreshLayout()
     {
-        AlignRowToTimelineContent();
-        SetupTrackBarLayout();
+        ApplyLayoutSettings();
         LayoutRebuilder.ForceRebuildLayoutImmediate(trackBar);
         RebuildGridLines();
         RefreshHandlePositions();
@@ -86,37 +81,10 @@ public class TrackRowUI : MonoBehaviour
         ClearGridLines();
     }
 
-    void AlignRowToTimelineContent()
+    void ApplyLayoutSettings()
     {
-        if (timelineContentReference == null)
-        {
-            SetupLabelLayout();
-            return;
-        }
-
-        RectTransform rowRect = transform as RectTransform;
-        if (rowRect == null || trackBar == null)
-        {
-            return;
-        }
-
-        Vector3[] refCorners = new Vector3[4];
-        Vector3[] rowCorners = new Vector3[4];
-        timelineContentReference.GetWorldCorners(refCorners);
-        rowRect.GetWorldCorners(rowCorners);
-
-        float refLeft = refCorners[0].x;
-        float refRight = refCorners[2].x;
-        float rowLeft = rowCorners[0].x;
-
-        float labelWidth = (refLeft - rowLeft) / rowRect.lossyScale.x;
-        float contentWidth = (refRight - refLeft) / timelineContentReference.lossyScale.x;
-
-        layout = new TimelineLayoutSettings(
-            Mathf.Max(0f, labelWidth),
-            Mathf.Max(0f, contentWidth),
-            layout.labelOffsetX);
         SetupLabelLayout();
+        SetupTrackBarLayout();
     }
 
     void SetupLabelLayout()
@@ -130,8 +98,13 @@ public class TrackRowUI : MonoBehaviour
         labelRect.pivot = new Vector2(0f, 0.5f);
         labelRect.anchorMin = new Vector2(0f, 0.5f);
         labelRect.anchorMax = new Vector2(0f, 0.5f);
-        labelRect.anchoredPosition = new Vector2(layout.labelOffsetX, 0f);
+
+        float labelPadding = Mathf.Max(0f, layout.labelOffsetX);
+        labelRect.anchoredPosition = new Vector2(labelPadding, 0f);
         labelRect.sizeDelta = new Vector2(layout.labelColumnWidth, labelRect.sizeDelta.y);
+
+        labelText.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
+        labelText.overflowMode = TMPro.TextOverflowModes.Truncate;
     }
 
     void SetupTrackBarLayout()
