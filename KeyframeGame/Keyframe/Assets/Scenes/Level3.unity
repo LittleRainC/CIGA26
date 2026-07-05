@@ -1726,6 +1726,8 @@ MonoBehaviour:
   duration: 30
   gridInterval: 5
   playKey: 32
+  playClip: {fileID: 8300000, guid: 3fc096214278a1443afbfc444bb193a1, type: 3}
+  playVolume: 1
 --- !u!1001 &1347754210
 PrefabInstance:
   m_ObjectHideFlags: 0

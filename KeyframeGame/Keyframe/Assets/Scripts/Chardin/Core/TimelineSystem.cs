@@ -14,7 +14,13 @@ public class TimelineSystem : MonoBehaviour
     [Header("Input")]
     [SerializeField] KeyCode playKey = KeyCode.Space;
 
+    [Header("Audio")]
+    [SerializeField] AudioClip playClip;
+    [SerializeField] [Range(0f, 1f)] float playVolume = 1f;
+
     readonly List<TimelineTrack> tracks = new List<TimelineTrack>();
+
+    AudioSource audioSource;
 
     public float Duration => duration;
     public float GridInterval => gridInterval;
@@ -36,6 +42,19 @@ public class TimelineSystem : MonoBehaviour
         }
 
         Instance = this;
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null && playClip != null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        if (audioSource != null)
+        {
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            audioSource.spatialBlend = 0f;
+        }
     }
 
     void OnDestroy()
@@ -101,6 +120,11 @@ public class TimelineSystem : MonoBehaviour
         }
 
         IsPlaying = true;
+
+        if (playClip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(playClip, playVolume);
+        }
     }
 
     public void Pause()

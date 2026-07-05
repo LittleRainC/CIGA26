@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [DefaultExecutionOrder(100)]
@@ -277,6 +278,11 @@ public class TimelinePanel : MonoBehaviour
     void OnResetClicked()
     {
         timelineSystem?.ResetTimeline();
+
+        if (EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(null);
+        }
     }
 
     void HandleTimeChanged(float currentTime)

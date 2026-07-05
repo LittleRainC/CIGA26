@@ -2049,6 +2049,8 @@ MonoBehaviour:
   duration: 30
   gridInterval: 5
   playKey: 32
+  playClip: {fileID: 8300000, guid: 3fc096214278a1443afbfc444bb193a1, type: 3}
+  playVolume: 1
 --- !u!1 &1364655005
 GameObject:
   m_ObjectHideFlags: 0
