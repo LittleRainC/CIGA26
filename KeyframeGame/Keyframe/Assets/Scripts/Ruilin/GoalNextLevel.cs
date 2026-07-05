@@ -1,9 +1,12 @@
+using System.Collections;
 using UnityEngine;
 
 public class GoalNextLevel : MonoBehaviour
 {
     [SerializeField] GoalPanel goalPanel;
     [SerializeField] AudioClip completeClip;
+    [SerializeField] [Range(0f, 1f)] float completeVolume = 1f;
+    [SerializeField] float showDelay = 1f;
 
     bool completed;
 
@@ -27,7 +30,39 @@ public class GoalNextLevel : MonoBehaviour
         }
 
         completed = true;
-        goalPanel.Show(completeClip);
+        TimelineSystem.Instance?.Pause();
+
+        Rigidbody2D playerRb = other.attachedRigidbody;
+        if (playerRb != null)
+        {
+            playerRb.velocity = new Vector2(0f, playerRb.velocity.y);
+        }
+
+        PlayCompleteClip();
+        StartCoroutine(ShowPanelAfterDelay());
+    }
+
+    void PlayCompleteClip()
+    {
+        if (completeClip == null)
+        {
+            return;
+        }
+
+        AudioSource.PlayClipAtPoint(completeClip, transform.position, completeVolume);
+    }
+
+    IEnumerator ShowPanelAfterDelay()
+    {
+        if (showDelay > 0f)
+        {
+            yield return new WaitForSeconds(showDelay);
+        }
+
+        if (goalPanel != null)
+        {
+            goalPanel.Show();
+        }
     }
 
     void ResolveGoalPanel()

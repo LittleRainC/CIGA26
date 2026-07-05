@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
+[RequireComponent(typeof(AudioSource))]
 public class EndingManager : MonoBehaviour
 {
     [Header("UI")]
@@ -14,15 +15,29 @@ public class EndingManager : MonoBehaviour
     [SerializeField] private Sprite image2;
     [SerializeField] private Sprite image3;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip musicClip;
+    [SerializeField] private bool loopMusic = true;
+    [SerializeField] [Range(0f, 1f)] private float musicVolume = 1f;
+
     [Header("Settings")]
     [SerializeField] private float displayTime = 1f;
     [SerializeField] private float spaceDelay = 2f;
 
     private bool canReturn = false;
+    private AudioSource musicSource;
+
+    void Awake()
+    {
+        musicSource = GetComponent<AudioSource>();
+        musicSource.playOnAwake = false;
+        musicSource.spatialBlend = 0f;
+    }
 
     void Start()
     {
         spacePrompt.SetActive(false);
+        PlayMusic();
         StartCoroutine(PlayEnding());
     }
 
@@ -48,5 +63,18 @@ public class EndingManager : MonoBehaviour
 
         spacePrompt.SetActive(true);
         canReturn = true;
+    }
+
+    void PlayMusic()
+    {
+        if (musicClip == null || musicSource == null)
+        {
+            return;
+        }
+
+        musicSource.clip = musicClip;
+        musicSource.loop = loopMusic;
+        musicSource.volume = musicVolume;
+        musicSource.Play();
     }
 }

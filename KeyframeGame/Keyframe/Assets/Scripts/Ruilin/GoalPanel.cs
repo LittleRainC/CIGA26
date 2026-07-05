@@ -64,17 +64,10 @@ public class GoalPanel : MonoBehaviour
         }
     }
 
-    public void Show(AudioClip clip)
+    public void Show()
     {
         EnsureReady();
         gameObject.SetActive(true);
-
-        TimelineSystem.Instance?.Pause();
-
-        if (clip != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(clip, volume);
-        }
     }
 
     public void GoToNextLevel()
