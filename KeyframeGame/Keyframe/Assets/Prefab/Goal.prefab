@@ -98,7 +98,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 514ee07bcf02af741a03a9d263c0a2d5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nextSceneName: Level3
+  completeClip: {fileID: 8300000, guid: 582cb0d9a17ba584f878efc17b0450c2, type: 3}
 --- !u!70 &-5868620174268974784
 CapsuleCollider2D:
   m_ObjectHideFlags: 0

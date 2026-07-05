@@ -163,3 +163,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 3
   timelineSystem: {fileID: 0}
+  trapDeathClip: {fileID: 8300000, guid: 3b4bfd81835681e4bbb161979477d7d8, type: 3}
+  trapDeathVolume: 1

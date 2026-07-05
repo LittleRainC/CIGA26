@@ -1,15 +1,48 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class GoalNextLevel : MonoBehaviour
 {
-    [SerializeField] private string nextSceneName;
+    [SerializeField] GoalPanel goalPanel;
+    [SerializeField] AudioClip completeClip;
 
-    private void OnTriggerEnter2D(Collider2D other)
+    bool completed;
+
+    void Awake()
     {
-        if (!other.CompareTag("Player"))
-            return;
+        ResolveGoalPanel();
+    }
 
-        SceneManager.LoadScene(nextSceneName);
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (completed || !other.CompareTag("Player"))
+        {
+            return;
+        }
+
+        ResolveGoalPanel();
+        if (goalPanel == null)
+        {
+            Debug.LogWarning("GoalPanel not found. Add a GoalPanel under Canvas in this scene.", this);
+            return;
+        }
+
+        completed = true;
+        goalPanel.Show(completeClip);
+    }
+
+    void ResolveGoalPanel()
+    {
+        if (goalPanel != null)
+        {
+            return;
+        }
+
+        if (GoalPanel.Instance != null)
+        {
+            goalPanel = GoalPanel.Instance;
+            return;
+        }
+
+        goalPanel = FindObjectOfType<GoalPanel>(true);
     }
 }

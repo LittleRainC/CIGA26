@@ -9,7 +9,12 @@ public class AutoMove : MonoBehaviour
     [Header("Timeline")]
     [SerializeField] TimelineSystem timelineSystem;
 
+    [Header("Trap Death")]
+    [SerializeField] AudioClip trapDeathClip;
+    [SerializeField] [Range(0f, 1f)] float trapDeathVolume = 1f;
+
     Rigidbody2D rb;
+    AudioSource audioSource;
     Vector3 startPosition;
     Quaternion startRotation;
 
@@ -22,6 +27,15 @@ public class AutoMove : MonoBehaviour
         {
             timelineSystem = TimelineSystem.Instance;
         }
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f;
     }
 
     void Start()
@@ -59,6 +73,31 @@ public class AutoMove : MonoBehaviour
         transform.SetPositionAndRotation(startPosition, startRotation);
         rb.velocity = Vector2.zero;
         rb.angularVelocity = 0f;
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        TryPlayTrapDeathSound(other.gameObject);
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        TryPlayTrapDeathSound(collision.gameObject);
+    }
+
+    void TryPlayTrapDeathSound(GameObject other)
+    {
+        if (trapDeathClip == null || audioSource == null || other == null)
+        {
+            return;
+        }
+
+        if (other.GetComponentInParent<SpikeTrap>() == null)
+        {
+            return;
+        }
+
+        audioSource.PlayOneShot(trapDeathClip, trapDeathVolume);
     }
 
     public void SetMoveSpeed(float speed)
