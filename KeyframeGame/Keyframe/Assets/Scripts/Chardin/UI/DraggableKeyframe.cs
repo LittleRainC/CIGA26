@@ -22,7 +22,7 @@ public class DraggableKeyframe : MonoBehaviour, IBeginDragHandler, IDragHandler,
         {
             handleRect.anchorMin = new Vector2(0f, 0.5f);
             handleRect.anchorMax = new Vector2(0f, 0.5f);
-            handleRect.pivot = new Vector2(0f, 0.5f);
+            handleRect.pivot = new Vector2(0.5f, 0.5f);
             handleRect.anchoredPosition = Vector2.zero;
             handleRect.localScale = Vector3.one;
         }
