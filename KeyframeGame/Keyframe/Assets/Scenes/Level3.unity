@@ -887,7 +887,7 @@ GameObject:
   - component: {fileID: 404645219}
   - component: {fileID: 404645220}
   m_Layer: 0
-  m_Name: Switch
+  m_Name: Keyframe
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1893,8 +1893,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -60, y: 35}
-  m_SizeDelta: {x: 860, y: 20}
+  m_AnchoredPosition: {x: -70, y: 35}
+  m_SizeDelta: {x: 870, y: 20}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &1372395436
 MonoBehaviour:
@@ -2747,7 +2747,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   panelHeight: 140
-  labelColumnWidth: 60
+  labelColumnWidth: 70
   timelineContentWidth: 800
   labelOffsetX: 10
   playheadAreaY: 70
